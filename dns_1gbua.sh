@@ -24,31 +24,9 @@ dns_1gbua_add() {
     return 1
   fi
 
-  _info "ADD fulldomain='$fulldomain' txtvalue='$txtvalue'"
-
-  _info "Trying to find record id for domain '$fulldomain'..."
-  baseDomain=$(_get_domain "$fulldomain")
-  if [ -z "$baseDomain" ]; then
-    _err "Domain record not found"
-    exit 1
+  if ! _get_record_info "$fulldomain"; then
+    return 1
   fi
-  _info "Domain record found"
-
-  _info "Trying to get domain list..."
-  response="$(_get "$GB1UA_API/dns/list?_token_=$GB1UA_TOKEN")"
-  if [ -z "$response" ]; then
-      _err "Can't get domain list"
-      exit 1
-  fi
-  _info "Domain list loaded"
-
-  _info "Trying to get record id..."
-  recordId=$(_find_id_by_domain "$response" "$baseDomain")
-  if [ -z "$recordId" ]; then
-      _err "Record id not found"
-      exit 1
-    fi
-  _info "Record id found '$recordId'"
 
   dnsValue=$(echo "$txtvalue" | tr -d "\n\r" | _url_encode)
   _info "Trying to create TXT record '$dnsValue'"
@@ -74,30 +52,9 @@ dns_1gbua_rm() {
     return 1
   fi
 
-_info "Trying to find record id for domain '$fulldomain'..."
-  baseDomain=$(_get_domain "$fulldomain")
-  if [ -z "$baseDomain" ]; then
-    _err "Domain record not found"
-    exit 1
+  if ! _get_record_info "$fulldomain"; then
+    return 1
   fi
-  _info "Domain record found"
-
-
-  _info "Trying to get domain list..."
-  response="$(_get "$GB1UA_API/dns/list?_token_=$GB1UA_TOKEN")"
-  if [ -z "$response" ]; then
-      _err "Can't get domain list"
-      exit 1
-  fi
-  _info "Domain list loaded"
-
-  _info "Trying to get record id..."
-  recordId=$(_find_id_by_domain "$response" "$baseDomain")
-  if [ -z "$recordId" ]; then
-      _err "Record id not found"
-      exit 1
-    fi
-  _info "Record id found '$recordId'"
 
   dnsValue=$(echo "$txtvalue" | tr -d "\n\r" | _url_encode)
   _info "Trying to remove TXT record '$dnsValue'"
@@ -110,6 +67,36 @@ _info "Trying to find record id for domain '$fulldomain'..."
 }
 
 ####################  Private functions below ##################################
+
+_get_record_info() {
+  local fulldomain="$1"
+
+  _info "Trying to find record id for domain '$fulldomain'..."
+  baseDomain=$(_get_domain "$fulldomain")
+  if [ -z "$baseDomain" ]; then
+    _err "Domain record not found"
+    return 1
+  fi
+  _info "Domain record found"
+
+  _info "Trying to get domain list..."
+  response="$(_get "$GB1UA_API/dns/list?_token_=$GB1UA_TOKEN")"
+  if [ -z "$response" ]; then
+    _err "Can't get domain list"
+    return 1
+  fi
+  _info "Domain list loaded"
+
+  _info "Trying to get record id..."
+  recordId=$(_find_id_by_domain "$response" "$baseDomain")
+  if [ -z "$recordId" ]; then
+    _err "Record id not found"
+    return 1
+  fi
+  _info "Record id found '$recordId'"
+
+  return 0
+}
 
 _init_check() {
   GB1UA_TOKEN="${GB1UA_TOKEN:-$(_readaccountconf_mutable GB1UA_TOKEN)}"
