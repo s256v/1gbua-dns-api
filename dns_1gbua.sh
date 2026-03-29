@@ -5,7 +5,7 @@ Site: 1gb.ua
 Docs: README.md
 Options:
  GB1UA_TOKEN API Token. Get API Token from https://www.1gb.ua/services_api.php
-Issues:
+Issues: https://github.com/s256v/1gbua-dns-api/issues/
 Author: Serhii Vakhnin <sva870@gmail.com>
 '
 
