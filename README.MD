@@ -10,7 +10,7 @@ Copy or link `dns_1gbua.sh` from this repo into `~/.acme.sh/dnsapi/` folder
 
 ## How to get a token
 Use `get-token.sh` to generate an initial token.
-The token will be stored in the `GB1UA_TOKEN` environment variable on the first run of acme.sh.
+You must set the token in the `GB1UA_TOKEN` environment variable before running acme.sh for the first time.
 More information about the token can be found [here](https://www.1gb.ua/services_api.php).
 
 ## How to issue certificate
