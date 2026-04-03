@@ -29,8 +29,8 @@ dns_1gbua_add() {
   fi
 
   dnsValue=$(echo "$txtvalue" | tr -d "\n\r" | _url_encode)
-  _info "Trying to create TXT record '$dnsValue'"
-  response="$(_get "$GB1UA_API/dns/raw?_token_=$GB1UA_TOKEN&s_add=1&dns_type=TXT&dns_name=_acme-challenge&dns_value=$dnsValue&_key_=$recordId")"
+  _info "Trying to create TXT record '$subDomain'='$dnsValue'@$recordId"
+  response="$(_get "$GB1UA_API/dns/raw?_token_=$GB1UA_TOKEN&s_add=1&dns_type=TXT&dns_name=$subDomain&dns_value=$dnsValue&_key_=$recordId")"
   if ! _contains "$response" "\"OK\""; then
     _err "Record NOT added. Response: '$response'"
     return 1
@@ -52,13 +52,14 @@ dns_1gbua_rm() {
     return 1
   fi
 
+  # sets baseDomain, subDomain, recordId
   if ! _get_record_info "$fulldomain"; then
     return 1
   fi
 
   dnsValue=$(echo "$txtvalue" | tr -d "\n\r" | _url_encode)
-  _info "Trying to remove TXT record '$dnsValue'"
-  response="$(_get "$GB1UA_API/dns/raw?_token_=$GB1UA_TOKEN&s_del=1&dns_type=TXT&dns_name=_acme-challenge&dns_value=$dnsValue&_key_=$recordId")"
+  _info "Trying to remove TXT record '$subDomain'='$dnsValue'@$recordId"
+  response="$(_get "$GB1UA_API/dns/raw?_token_=$GB1UA_TOKEN&s_del=1&dns_type=TXT&dns_name=$subDomain&dns_value=$dnsValue&_key_=$recordId")"
   if ! _contains "$response" "\"OK\""; then
     _err "Record NOT removed. Response: '$response'"
     return 1
@@ -79,6 +80,14 @@ _get_record_info() {
   fi
   _info "Domain record found"
 
+  _info "Trying to get sub-domain"
+  subDomain=$(_get_sub_domain "$fulldomain" "$baseDomain")
+  if [ -z "$subDomain" ]; then
+    _err "Sub-domain not found"
+    return 1
+  fi
+  _info "Sub-domain found '$subDomain'"
+
   _info "Trying to get domain list..."
   response="$(_get "$GB1UA_API/dns/list?_token_=$GB1UA_TOKEN")"
   if [ -z "$response" ]; then
@@ -90,7 +99,7 @@ _get_record_info() {
   _info "Trying to get record id..."
   recordId=$(_find_id_by_domain "$response" "$baseDomain")
   if [ -z "$recordId" ]; then
-    _err "Record id not found"
+    _err "Record id not found for '$baseDomain'"
     return 1
   fi
   _info "Record id found '$recordId'"
@@ -114,27 +123,69 @@ _init_check() {
 # Usage: get_domain "_acme-challenge.example.com"
 # Returns: ".example.com" on success, exits 1 on invalid input
 _get_domain() {
-  local input="$1"
+  input="$1"
 
   # Must start with "_acme-challenge."
-  if [[ "$input" != _acme-challenge.* ]]; then
-    echo "Error: Input must start with '_acme-challenge.' (got: '$input')" >&2
-    return 1
-  fi
+  case "$input" in
+    _acme-challenge.*) ;;
+    *)
+      echo "Error: Input must start with '_acme-challenge.' (got: '$input')" >&2
+      return 1
+      ;;
+  esac
 
-  # Extract domain part after "_acme-challenge."
-  local domain="${input#_acme-challenge.}"
+  # Extract domain part
+  domain=${input#_acme-challenge.}
 
-  # Require at least one non-empty label after the dot (i.e., domain must not be empty)
-  if [[ -z "$domain" ]]; then
+  # Ensure domain is not empty
+  [ -z "$domain" ] && {
     echo "Error: '_acme-challenge.' must be followed by a domain (got: '$input')" >&2
     return 1
-  fi
+  }
 
-  # Ensure leading dot (e.g., "example.com" → ".example.com")
-  [[ "$domain" != .* ]] && domain=".$domain"
+  # Extract last two labels using parameter expansion
+  last=${domain##*.}          # last label
+  rest=${domain%.*}          # everything before last
+  second_last=${rest##*.}    # second last label
 
-  echo "$domain"
+  # Ensure we had at least two labels
+  [ "$rest" = "$domain" ] && {
+    echo "Error: Domain must contain at least two labels (got: '$domain')" >&2
+    return 1
+  }
+
+  echo ".$second_last.$last"
+}
+
+# Usage: _get_sub_domain "_acme-challenge.example.com" ".example.com"
+# Returns: "_acme-challenge"
+_get_sub_domain() {
+  input="$1"
+  base="$2"
+
+  # Normalize base (remove leading dot)
+  base=${base#.}
+
+  [ -z "$base" ] && {
+    echo "Error: base domain is required" >&2
+    return 1
+  }
+
+  case "$input" in
+    *."$base") ;;
+    *)
+      echo "Error: '$input' does not match base '$base'" >&2
+      return 1
+      ;;
+  esac
+
+  # Remove base domain
+  sub=${input%"$base"}
+
+  # Remove trailing dot
+  sub=${sub%.}
+
+  echo "$sub"
 }
 
 # Finds domain ID from JSON by exact full_domain_name match.

@@ -1,106 +1,22 @@
 #!/bin/zsh
-
-jsonString=$(cat <<'EOF'
-[
-	{
-		"id": "162318",
-		"status": "1",
-		"unmovable": "0",
-		"online": "1",
-		"user_id": "63017",
-		"type": "2",
-		"adr1": "",
-		"adr2": "",
-		"zone": "example.com",
-		"full_domain_name": ".example.com",
-		"full_domain_name_local": "",
-		"memo": "",
-		"date_reg": "2010-04-17",
-		"iis_id": "66910",
-		"pay": "1",
-		"sid": "0",
-		"sid_reg": "20112334",
-		"sid_prolong": "0",
-		"sid_reg_order": "auto/",
-		"sid_reg_order_date": "2010-04-23 09:27:24",
-		"allow_prolong": "1",
-		"approved_prolong": "0",
-		"prolong_last_warned": "2026-03-24 00:45:49",
-		"shadow_source": "0",
-		"shadow_target": "0",
-		"reg_pending": "0",
-		"reg_pending_date": "2026-03-26 00:25:15",
-		"reg_pending_check_date": "2000-01-01 00:00:00",
-		"autoreg_error_flag": "0",
-		"autoreg_errors": "",
-		"managed_mx": "1",
-		"mailserver": "2",
-		"priority_mx": "mail-u4.1gb.ua",
-		"mailserver_alt_system": "0",
-		"mailserver_alt_system_status": "0",
-		"credit_status": "0",
-		"credit_phone": "",
-		"credit_contact": "",
-		"credit_contact_when": "",
-		"credit_why": "",
-		"credit_deny_reason": "",
-		"credit_description": "",
-		"ns_managed": "1",
-		"ns_ns1": "",
-		"ns_ns1_ip": "",
-		"ns_ns2": "",
-		"ns_ns2_ip": "",
-		"ns_ns3": "",
-		"ns_ns3_ip": "",
-		"ns_status": "0",
-		"ns_status_comment": "",
-		"detected_mx": "",
-		"detected_mx_date": "0000-00-00 00:00:00",
-		"mod_memo": "",
-		"mod_rank": "0",
-		"mod_memo1": "",
-		"mod_memo2": "",
-		"validated_date": "2026-03-04 01:55:11",
-		"v2_expires": "2026-04-23 00:00:00",
-		"v2_expires_detected_date": "2026-03-24 00:45:49",
-		"v2_expires_update_attempt_date": "2026-03-24 00:45:43",
-		"v2_expires_mntby": "",
-		"v2_password": "",
-		"mod_rank_effective": "",
-		"redirect_http": "",
-		"auto_prolong": "0",
-		"jabber_server": "",
-		"vds_ip_assigned": "",
-		"vds_ip_assigned_ip": "",
-		"whois": "",
-		"whois_date": "2026-03-27",
-		"mailserver_alt_system_f1": "0",
-		"last_prolong_service": "2000-01-01 00:00:00",
-		"last_prolong_reprolong_attempts": "0",
-		"v2_hold": "0",
-		"idn_decode": "",
-		"ssl_ip_assigned_ip": "",
-		"ssl_status": "0",
-		"ssl_c1": "",
-		"ssl_c2": "",
-		"ssl_c3": "",
-		"ssl_c4": "",
-		"ssl_c5": "",
-		"ssl_inplace": "99",
-		"ssl_inplace_date": "2021-01-14 20:03:56",
-		"ssl_inplace_opt": "0",
-		"detected_ns": "",
-		"detected_ns_date": "0000-00-00 00:00:00",
-		"managed_spf": "0",
-		"managed_spf_add": "",
-		"rkn": "0",
-		"ua_deny_prolong": "0",
-		"v2_source": "",
-		"v2_source_dtc": "0000-00-00 00:00:00"
-	}
-]
-EOF
-)
+source ../.env
+source ~/.acme.sh/acme.sh >/dev/null 2>&1
 source ../dns_1gbua.sh
-dnsId=$(_find_id_by_domain "$jsonString" ".example.com")
-echo "dnsId='$dnsId'"
+
+export GB1UA_TOKEN=$TEST_GB1UA_TOKEN
+
+_get(){
+  echo $(curl -s $1)
+}
+
+fulldomain="_acme-challenge.s.$TEST_GB1UA_DOMAIN"
+if ! _get_record_info "$fulldomain"; then
+    return 1
+fi
+echo "RecordId="$recordId
+
+fulldomain="_acme-challenge.$TEST_GB1UA_DOMAIN"
+if ! _get_record_info "$fulldomain"; then
+    return 1
+fi
+echo "RecordId="$recordId
